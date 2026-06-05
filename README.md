@@ -64,8 +64,7 @@ times = trace_start_time[event_i, ch_i] + np.arange(2048) * trace_delta_t[event_
 
 ## Local Processing
 
-Use the conda/module environment where the NuRadioReco RNOG examples run. The
-plain login shell may be missing dependencies such as `radiotools`.
+Use the environment where the NuRadioReco RNOG examples run. 
 
 Build real Station 23 data:
 
@@ -96,9 +95,6 @@ The manifest is a lightweight index:
 file_path,event_index,station,run,event_number,timestamp,trigger_type,label,source_type,split,weight
 ```
 
-Use it from PyTorch/BDT loaders to open only the shard and event needed for each
-sample.
-
 Trigger type codes are stored in both the HDF5 shards and the manifest. The
 manifest builder reads `/trigger_type` from each shard:
 
@@ -107,16 +103,8 @@ manifest builder reads `/trigger_type` from each shard:
  1 = LT
  2 = FORCE
  3 = RADIANT
- 4 = UNKNOWN
 ```
 
-To train on only selected trigger types, filter the manifest or loaded feature
-table downstream. For example, keep only RADIANT real data plus all simulations:
-
-```python
-RADIANT = 3
-pool = manifest[(manifest.source_type == 1) | (manifest.trigger_type == RADIANT)]
-```
 
 ## Configs
 
