@@ -1,0 +1,68 @@
+# Config-driven example for building signal shards from nc_cr_proxy NUR simulations.
+
+station: 23
+
+input_files:
+  - /fs/ess/PAS2608/alisa/rno_g/deepCRsearch/data/nc_cr_proxy/lgE*/*.nur
+output_dir: /fs/ess/PAS2608/alisa/rno_g/TS_ML/ml_dataset/sim/nc_cr_proxy
+output_prefix: station23_sim
+
+# Current training assumption: simulations are signal.
+label: 1
+source_type: simulation
+event_weight: 1.0
+# If true, /weight comes from the paired simulation .hdf5 when available.
+# If false, /weight uses event_weight for every event.
+use_sim_weights: true
+
+# Local NuRadioMC checkout to import before any installed copy.
+nuradio_path: /users/PCON0003/anozdrina/rno-g/updatedCRpipeline/NuRadioMC
+
+detector_source: rnog_mongo
+# detector_source: rnog_file
+# detector_file: /path/to/detector.json.xz
+
+# Use the same preprocessing choices as real data so classifiers do not learn
+# formatting differences between data and simulation.
+preprocessor:
+  apply_block_offset_removal: false
+  apply_glitch_detection: false
+  apply_cable_delay: true
+  apply_hw_phase_removal: false
+  apply_upsampling: false
+  apply_cw_removal: false
+  apply_bandpass: false
+
+apply_standard_processing: false
+output_resample_rate_ghz:
+
+reader_kwargs: {}
+
+features:
+  # snr is needed for snr/coherent_snr; max_amplitude and
+  # impulse_correlations are needed for the PA/HPOL amplitude ratio and
+  # PA impulse-template averages. The builder auto-adds these if omitted.
+  feature_groups: [snr, max_amplitude, impulse_correlations]
+  set_channel_parameters: true
+
+hit_filter:
+  complete_time_check: true
+  complete_hit_check: true
+
+# 3D interferometric reco features. The full reco setup is loaded from the
+# deep_cr_search reco config, with the table path from pipeline.yaml.
+# When enabled, /features gains rho, phi, z, max_corr, and surf_corr_zen.
+reco3d:
+  enabled: true
+  config_file: /users/PCON0003/anozdrina/rno-g/updatedCRpipeline/deep_cr_search/workflow/configs/reco.yaml
+  time_delay_tables: /fs/ess/PAS2608/alisa/rno_g/deepCRsearch/data/multiray_tables
+  channels: [0, 1, 2, 3, 5, 6, 7, 9, 10, 22, 23, 4, 8, 11, 21]
+  coord_system: cylindrical
+  validation: true
+  apply_upsampling: true
+  upsampling_rate_ghz: 10.0
+
+compression: gzip
+waveform_chunk_events: 64
+waveform_units: NuRadioReco voltage units
+continue_on_run_error: true

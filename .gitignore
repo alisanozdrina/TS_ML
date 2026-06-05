@@ -1,0 +1,29 @@
+# Python/cache noise
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Slurm/runtime logs
+logs/
+*.out
+*.err
+
+# Generated datasets and large data products
+ml_dataset/
+*.h5
+*.hdf5
+*.root
+*.nur
+*.tmp
+
+# Generated Slurm file lists
+slurm/lists/*.txt
+!slurm/lists/.gitkeep
+
+# Local environment/editor files
+.env
+.venv/
+venv/
+*.swp
+*~
