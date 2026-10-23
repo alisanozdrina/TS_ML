@@ -642,10 +642,16 @@ def read_calibrate_events(
     det,
     config: Mapping,
     sim_truth: Optional[Mapping[str, np.ndarray]] = None,
+    allowed_trigger_types: Optional[Iterable[int]] = None,
 ) -> Iterator[Dict[str, object]]:
     """Yield processed ML records for one run."""
     provider = init_provider(input_files, det, config)
     extractor, hit_filter = init_feature_tools(config)
+    allowed_trigger_types = (
+        None
+        if allowed_trigger_types is None
+        else {int(trigger_type) for trigger_type in allowed_trigger_types}
+    )
     reco3d = None
     reco_resampler = None
     reco_init_attempted = not get_reco3d_config(config).get("enabled", False)
@@ -654,6 +660,13 @@ def read_calibrate_events(
             try:
                 maybe_process_event(event, det, config)
                 station = event.get_station(station_id)
+                trigger_type = get_trigger_code(station)
+                if (
+                    allowed_trigger_types is not None
+                    and int(trigger_type) not in allowed_trigger_types
+                ):
+                    yield {"_skip": True}
+                    continue
                 if not reco_init_attempted:
                     reco_init_attempted = True
                     try:
@@ -673,7 +686,7 @@ def read_calibrate_events(
                     "trace_delta_t": trace_delta_t,
                     "run": np.int32(event.get_run_number()),
                     "event_number": np.int32(event.get_id()),
-                    "trigger_type": get_trigger_code(station),
+                    "trigger_type": trigger_type,
                     "timestamp": get_timestamp(station),
                     "sim_truth": truth_row,
                     "weight": (
@@ -932,7 +945,15 @@ def build_run(station: int, run: int, config: Mapping) -> None:
         "source_type": int(get_source_type_code(config)),
         "dataset_year": config.get("year", ""),
     }
-    records = read_calibrate_events(input_files, station, det, config)
+    event_selection = config.get("event_selection", {}) or {}
+    allowed_trigger_types = event_selection.get("trigger_types")
+    records = read_calibrate_events(
+        input_files,
+        station,
+        det,
+        config,
+        allowed_trigger_types=allowed_trigger_types,
+    )
     read_count, written_count, skipped_count = write_hdf5(
         records,
         output_path,

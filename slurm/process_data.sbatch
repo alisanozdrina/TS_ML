@@ -17,7 +17,12 @@ source /users/PCON0003/anozdrina/venvs/py312-env/bin/activate
 set -u
 
 if [[ -n "${RUN_LIST:-}" ]]; then
-  RUN_NUMBER=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "${RUN_LIST}")
+  RUN_LIST_LINE=$((SLURM_ARRAY_TASK_ID + 1))
+  RUN_NUMBER=$(sed -n "${RUN_LIST_LINE}p" "${RUN_LIST}")
+  if [[ -z "${RUN_NUMBER}" ]]; then
+    echo "No run number on line ${RUN_LIST_LINE} of ${RUN_LIST}; exiting."
+    exit 0
+  fi
 else
   : "${RUN_START:?Set RUN_START or RUN_LIST. Example: sbatch --array=0-99 --export=ALL,RUN_START=1000 slurm/process_data.sbatch}"
   RUN_NUMBER=$((RUN_START + SLURM_ARRAY_TASK_ID))
@@ -29,6 +34,6 @@ fi
 
 echo "Processing station 23 run ${RUN_NUMBER}"
 
-python build_ml_run_h5.py \
-  --config build_ml_run_h5.example.yaml \
+python scripts/build_ml_run_h5.py \
+  --config configs/build_ml_run_h5.example.yaml \
   --run "${RUN_NUMBER}"

@@ -14,8 +14,12 @@ label: 0
 source_type: data
 event_weight: 1.0
 
+# Save only FORCE-triggered data events. Set trigger_types to null to save all.
+event_selection:
+  trigger_types: [2]
+
 # Local NuRadioMC checkout to import before any installed copy.
-nuradio_path: /users/PCON0003/anozdrina/rno-g/updatedCRpipeline/NuRadioMC
+nuradio_path: /fs/ess/PAS2608/alisa/rno_g/CR_workshop/NuRadioMC
 
 detector_source: rnog_mongo
 # detector_source: rnog_file
@@ -30,7 +34,7 @@ preprocessor:
   apply_cable_delay: true
   apply_hw_phase_removal: false
   apply_upsampling: false
-  apply_cw_removal: false
+  apply_cw_removal: true
   apply_bandpass: false
 
 # The older standard RNOG example processing can be added on top, but it

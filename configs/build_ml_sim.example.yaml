@@ -3,8 +3,8 @@
 station: 23
 
 input_files:
-  - /fs/ess/PAS2608/alisa/rno_g/deepCRsearch/data/nc_cr_proxy/lgE*/*.nur
-output_dir: /fs/ess/PAS2608/alisa/rno_g/TS_ML/ml_dataset/sim/nc_cr_proxy
+  - /fs/ess/PAS2608/alisa/rno_g/deepCRsearch/data/nc_cr_proxy_full_set/lgE*/*.nur
+output_dir: /fs/ess/PAS2608/alisa/rno_g/TS_ML/ml_dataset/sim/nc_cr_proxy_full_set
 output_prefix: station23_sim
 
 # Current training assumption: simulations are signal.
@@ -16,7 +16,7 @@ event_weight: 1.0
 use_sim_weights: true
 
 # Local NuRadioMC checkout to import before any installed copy.
-nuradio_path: /users/PCON0003/anozdrina/rno-g/updatedCRpipeline/NuRadioMC
+nuradio_path: /fs/ess/PAS2608/alisa/rno_g/CR_workshop/NuRadioMC
 
 detector_source: rnog_mongo
 # detector_source: rnog_file
