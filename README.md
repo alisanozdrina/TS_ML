@@ -1,7 +1,6 @@
 # RNO-G ML Training Dataset Builder
 
-This workspace builds HDF5 shards for comparing time-series ML methods with
-feature-based methods such as BDTs.
+This workspace builds HDF5 files for comparing time-series ML methods 
 
 Current working assumption:
 
@@ -11,7 +10,7 @@ Current working assumption:
 
 ## Outputs
 
-`build_ml_run_h5.py` writes one HDF5 shard per real run or per simulation NUR file.
+`build_ml_run_h5.py` writes one HDF5 per real run or per simulation NUR file.
 
 Common datasets:
 
@@ -62,61 +61,62 @@ Waveform sample times can be reconstructed with:
 times = trace_start_time[event_i, ch_i] + np.arange(2048) * trace_delta_t[event_i, ch_i]
 ```
 
-## Local Processing
+## Local Processing: prepare trainign dataset
 
-Use the conda/module environment where the NuRadioReco RNOG examples run. The
-plain login shell may be missing dependencies such as `radiotools`.
+working example uses Python 3.12.3., use with NuRadioMC branch feat/feature-extracton; 
+requirements.txt:
+numpy
+scipy
+h5py
+PyYAML
+matplotlib
+torch
+mattak
 
-Build real Station 23 data:
-
-```bash
+```
 cd /fs/ess/PAS2608/alisa/rno_g/TS_ML
-python build_ml_run_h5.py --config build_ml_run_h5.example.yaml
+source /users/PCON0003/anozdrina/venvs/py312-env/bin/activate
+mkdir -p logs slurm/lists
 ```
 
-Build simulation signal shards:
-
-```bash
-python build_ml_run_h5.py --config build_ml_sim.example.yaml
+Create real-data HDF5 files:
 ```
-
-Build the train/validation/test manifest after both sets of shards exist:
-
-```bash
-python build_training_manifest.py \
-  'ml_dataset/data/station23_2022/*.h5' \
-  'ml_dataset/sim/nc_cr_proxy/*.h5' \
-  --output ml_dataset/training_manifest.csv \
-  --relative-to .
+python scripts/build_ml_run_h5.py \
+  --config configs/build_ml_run_h5.example.yaml \
+  --run 1000
 ```
+this creates: ml_dataset/data/station23_2022/station23_run1000.h5
 
-The manifest is a lightweight index:
-
-```text
-file_path,event_index,station,run,event_number,timestamp,trigger_type,label,source_type,split,weight
+to run on slurm:
 ```
-
-Use it from PyTorch/BDT loaders to open only the shard and event needed for each
-sample.
-
-Trigger type codes are stored in both the HDF5 shards and the manifest. The
-manifest builder reads `/trigger_type` from each shard:
-
-```text
--1 = unavailable
- 1 = LT
- 2 = FORCE
- 3 = RADIANT
- 4 = UNKNOWN
+sbatch --array=0-49%10 \
+  --export=ALL,RUN_START=1000,RUN_END=1049 \
+  slurm/process_data.sbatch
 ```
+make sure to change account name etc in process_data.sbatch.
 
-To train on only selected trigger types, filter the manifest or loaded feature
-table downstream. For example, keep only RADIANT real data plus all simulations:
-
-```python
-RADIANT = 3
-pool = manifest[(manifest.source_type == 1) | (manifest.trigger_type == RADIANT)]
+Create simulation HDF5 files:
+localy --
 ```
+python scripts/build_ml_run_h5.py \
+  --config configs/build_ml_sim.example.yaml \
+  --input-file /path/to/lgE18.5_example.nur
+```
+To use slurm, first make a list of all simulations files available:
+optional arg:   --n-files 100 \ if u don't need the full list
+
+```
+python scripts/select_sim_files.py \
+  --config configs/build_ml_sim.example.yaml \
+  --output slurm/lists/nc_cr_proxy_nur.txt
+```
+to submit jobs on slurm:
+```
+sbatch --array=0-99%20 \
+  --export=ALL,SIM_LIST=slurm/lists/sim_random100.txt,SIM_FILES_PER_TASK=1 \
+  slurm/process_sim.sbatch
+```
+Output goes to ml_dataset/.
 
 ## Configs
 
@@ -162,13 +162,7 @@ reco3d:
   time_delay_tables: /fs/ess/PAS2608/alisa/rno_g/deepCRsearch/data/multiray_tables
 ```
 
-For a smoke test, override the config from the command line:
 
-```bash
-python build_ml_run_h5.py --config build_ml_run_h5.example.yaml --run 1000
-python build_ml_run_h5.py --config build_ml_sim.example.yaml \
-  --input-file /fs/ess/PAS2608/alisa/rno_g/deepCRsearch/data/nc_cr_proxy/lgE19.0/lgE19.0_j0001.nur
-```
 
 ## Slurm
 
@@ -247,12 +241,6 @@ sbatch --array=1-$(wc -l < "${SIM_LIST}")%20 \
 
 The `%20` limits concurrency to 20 tasks; adjust it for filesystem and cluster
 load.
-
-After both arrays finish, build the manifest:
-
-```bash
-sbatch slurm/build_manifest.sbatch
-```
 
 Before submitting, edit the `source ...` line in each Slurm file to activate
 your NuRadioReco environment.
